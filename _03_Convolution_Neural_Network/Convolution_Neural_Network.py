@@ -2,10 +2,6 @@
 # 在自己电脑上训练好模型，保存参数，在这里读取模型参数（不要使用JIT读取），在main中返回读取了模型参数的模型
 
 import os
-
-os.system("sudo pip3 install torch")
-os.system("sudo pip3 install torchvision")
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,42 +11,41 @@ from torch.utils.data import DataLoader
     
 
 class NeuralNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes=10):
         super(NeuralNetwork, self).__init__()
-        # 在这里定义您选择的网络模型结构
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
-        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
-        self.fc1 = nn.Linear(256 * 4 * 4, 1024)
-        self.fc2 = nn.Linear(1024, 512)
-        self.fc3 = nn.Linear(512, 10)
-        self.relu = nn.ReLU()
-        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.dropout = nn.Dropout(0.5)
+
+        # 定义卷积层
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1)
+
+        # 定义池化层
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        # 定义全连接层
+        self.fc1 = nn.Linear(in_features=256 * 4 * 4, out_features=512)
+        self.fc2 = nn.Linear(in_features=512, out_features=num_classes)
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-        x = self.conv2(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-        x = self.conv3(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
+        x = nn.functional.relu(x)
+        x = self.pool(x)
 
-        x = x.view(x.size(0), -1)  # 展平图像张量
+        x = self.conv2(x)
+        x = nn.functional.relu(x)
+        x = self.pool(x)
+
+        x = self.conv3(x)
+        x = nn.functional.relu(x)
+        x = self.pool(x)
+
+        x = x.view(x.size(0), -1)
         x = self.fc1(x)
-        x = self.relu(x)
-        x = self.dropout(x)
+        x = nn.functional.relu(x)
         x = self.fc2(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-        x = self.fc3(x)
 
         return x
-
-def train_and_save_model():
+def read_data():
     # 这里可自行修改数据预处理，batch大小也可自行调整
     # 保持本地训练的数据读取和这里一致
     dataset_train = torchvision.datasets.CIFAR10(root='../data/exp03', train=True, download=True, transform=torchvision.transforms.ToTensor())
